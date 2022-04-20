@@ -12,7 +12,7 @@ struct Item: Hashable {
     let id = UUID()
     
     static func generate() -> Item {
-        let number = Int.random(in: 1...2)
+        let number = Int.random(in: 1...200)
         return Item(number: "\(number)")
     }
 }
@@ -35,12 +35,11 @@ class ViewController: UITableViewController {
     
     func makeDataSource() -> UITableViewDiffableDataSource<Int, Item> {
         
-        return UITableViewDiffableDataSource(tableView: tableView, cellProvider: {  tableView, indexPath, item in
+        return UITableViewDiffableDataSource(tableView: tableView) {  tableView, indexPath, item in
             let cell = tableView.dequeueReusableCell(withIdentifier: self.identifier, for: indexPath)
             cell.textLabel?.text = item.number
             return cell
         }
-        )
     }
     
     @objc func more() {
