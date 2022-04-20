@@ -6,6 +6,7 @@
 //
 
 import UIKit
+import Combine
 
 struct Item: Hashable {
     let number: String
@@ -20,17 +21,46 @@ struct Item: Hashable {
 class ViewController: UITableViewController {
     
     let identifier = "Cell"
-    var items = [Item]()
+    @Published var items = [Item]()
+    private var bag = Set<AnyCancellable>()
+
     private lazy var datasource = makeDataSource()
+    var addButt : UIBarButtonItem!
 
     override func viewDidLoad() {
         super.viewDidLoad()
 
-        navigationItem.rightBarButtonItem = UIBarButtonItem(barButtonSystemItem: .add, target: self, action: #selector(more))
+        addButt = UIBarButtonItem(barButtonSystemItem: .add, target: self, action: #selector(more))
+        navigationItem.rightBarButtonItem = addButt
         navigationItem.leftBarButtonItem = UIBarButtonItem(barButtonSystemItem: .trash, target: self, action: #selector(fewer))
 
         tableView.register(UITableViewCell.self, forCellReuseIdentifier: identifier)
         tableView.dataSource = datasource
+        
+        $items
+            .removeDuplicates()
+            .sink { [weak self] list in
+                guard let self = self else {return}
+                var snapshot = self.datasource.snapshot()
+                snapshot.deleteAllItems()
+                snapshot.appendSections([0])
+                snapshot.appendItems(list, toSection: 0)
+                self.datasource.apply(snapshot, animatingDifferences: true)
+            }
+            .store(in: &bag)
+        
+        
+        $items
+            .removeDuplicates()
+            .sink { [weak self] list in
+                if list.count >= 5 {
+                    self?.addButt.isEnabled = false
+                } else {
+                    self?.addButt.isEnabled = true
+                }
+            }
+            .store(in: &bag)
+
     }
     
     func makeDataSource() -> UITableViewDiffableDataSource<Int, Item> {
@@ -44,22 +74,12 @@ class ViewController: UITableViewController {
     
     @objc func more() {
         items.append(Item.generate())
-        update()
     }
     
     @objc func fewer() {
         items.removeLast()
-        update()
     }
     
-    func update() {
-        var snapshot = datasource.snapshot()
-        snapshot.deleteAllItems()
-        snapshot.appendSections([0])
-        snapshot.appendItems(items, toSection: 0)
-        datasource.apply(snapshot, animatingDifferences: true)
-    }
-
 
     /*
     // old style
